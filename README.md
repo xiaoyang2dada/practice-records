@@ -1,4 +1,5 @@
-![ROS](https://img.shields.io/badge/ROS-Noetic-blue?logo=ros)
+![ROS](https://img.shields.io/badge/ROS-Noetic-blue?logo=ros&style=flat-square)
+![C++](https://img.shields.io/badge/C++-17‑blue.svg?logo=c%2B%2B&style=flat-square)
 # practice-records
 - This repository records my personal learning and practice process.
  
