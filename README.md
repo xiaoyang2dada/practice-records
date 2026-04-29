@@ -1,3 +1,5 @@
+![ROS](https://img.shields.io/badge/ROS-Noetic-blue?logo=ros)
+
 # practice-records
 This repository records my personal learning and practice process.
  
