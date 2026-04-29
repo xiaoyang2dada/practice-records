@@ -2,11 +2,11 @@
 - 本工作空间用于回放 `rosbag` 数据包，订阅解析 `/test/camera_cones` 锥桶话题，完成相机坐标系到车体坐标系转换，并在 `rviz` 中可视化展示。
 
 ## 📡 话题与节点说明
-- ROSBag 原始数据源话题：`/test/camera_cones`
+- rosbag 原始数据源话题：`/test/camera_cones`
 - 数据解析订阅节点：`/demo01_sub`
 - 中转发布话题：`/car/cones`
-- RViz 可视化订阅节点：`/visualization_rviz`
-- RViz 可视化发布话题：`/visual/cones`
+- rviz 可视化订阅节点：`/visualization_rviz`
+- rviz 可视化发布话题：`/visual/cones`
  
 ## 🚀 运行步骤
  
