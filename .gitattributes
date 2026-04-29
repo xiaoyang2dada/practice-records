@@ -1,6 +1,0 @@
-*.launch linguist-language=ROS linguist-detectable
-*.msg linguist-language=ROS linguist-detectable
-*.srv linguist-language=ROS linguist-detectable
-*.action linguist-language=ROS linguist-detectable
-*.urdf linguist-language=ROS linguist-detectable
-*.xacro linguist-language=ROS linguist-detectable
