@@ -11,9 +11,10 @@
 ## 🚀 运行步骤
  
 1. 进入工作空间，刷新环境
- 
-- source devel/setup.bash
- 
+ ```
+source devel/setup.bash
+ ```
 2. 一键启动所有节点
- 
-- roslaunch plumbing_pub_sub task.launch 
+ ```
+roslaunch plumbing_pub_sub task.launch 
+ ```
