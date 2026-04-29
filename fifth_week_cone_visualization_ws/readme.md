@@ -1,5 +1,5 @@
 # Cone Visualization ROS Workspace
-- 本工作空间用于回放 ROS Bag 数据包，订阅解析 `/test/camera_cones` 锥桶话题，完成相机坐标系到车体坐标系转换，并在 RViz 中可视化展示。
+- 本工作空间用于回放 `rosbag` 数据包，订阅解析 `/test/camera_cones` 锥桶话题，完成相机坐标系到车体坐标系转换，并在 `RViz` 中可视化展示。
 
 ## 📡 话题与节点说明
 - ROSBag 原始数据源话题：`/test/camera_cones`
