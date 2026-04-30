@@ -20,3 +20,5 @@ source devel/setup.bash
  ```
 roslaunch plumbing_pub_sub task.launch 
  ```
+
+![result_visualization](cones_visualization_done.png)
