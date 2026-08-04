@@ -1,74 +1,114 @@
-# FSAC 锥桶检测 — 感知系统开发
+# FSAC 锥桶检测 — 推理使用指南
 
-中国大学生无人驾驶方程式大赛（FSAC）感知模块，覆盖从数据采集、标注、训练到推理的完整工具链。
-
-## 项目结构
-
-```
-August_task/
-├── results/                  # 核心脚本
-│   ├── bag_info.py           # 查看 ROS bag 视频话题信息
-│   ├── extract_frames.py     # 从 bag 抽帧保存为图片
-│   ├── cone_label_tool.py    # 交互式锥桶标注工具（GUI）
-│   ├── prepare_dataset.py    # 数据集整理 + FSACOCO → YOLO 格式转换
-│   ├── train_cone.py         # YOLOv8 锥桶检测模型训练
-│   └── bag_yolo_detect.py    # bag 视频流 YOLO 推理 + 保存 MP4
-├── FSACOCO/                  # FSAC 开源锥桶数据集
-├── YOLOv8/                   # YOLOv8 demo 脚本
-├── fifth_week_tasks/         # ROS catkin 工作空间
-├── requirements.txt          # Python 依赖
-└── README.md
-```
+> 模型已完成训练，以下为 bag 视频流 → YOLO 锥桶检测 → 结果展示的完整流程。
 
 ## 环境准备（Ubuntu 20.04 + ROS Noetic）
 
-### 1. ROS 系统依赖
-
 ```bash
+# ROS 依赖
 sudo apt install ros-noetic-rosbag ros-noetic-cv-bridge ros-noetic-sensor-msgs
+
+# Python 依赖
+cd August_task/results
+pip3 install ultralytics opencv-python numpy torch -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
-### 2. Python 虚拟环境
+---
+
+## 🚀 完整检测流程
+
+### 第一步：查看 bag 信息
 
 ```bash
-cd results
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r ../requirements.txt
+cd ~/August_task/results
+source /opt/ros/noetic/setup.bash
+
+python3 bag_info.py ../fifth_week_tasks/src/plumbing_pub_sub/bag/test.bag
 ```
 
-## 工作流程
-
+输出示例：
 ```
-ROS Bag 录制 → 抽帧提取 → 标注锥桶 → 数据集准备 → 模型训练 → 推理检测
+🎥 视频流话题:
+  └─ /camera/image_raw/compressed  (sensor_msgs/CompressedImage, 1500 帧)
 ```
 
-### ① 查看 bag 信息
+---
+
+### 第二步：运行锥桶检测
+
 ```bash
-python3 bag_info.py <bag文件路径>
+python3 bag_yolo_detect.py ../fifth_week_tasks/src/plumbing_pub_sub/bag/test.bag \
+    --model best.pt \
+    --conf 0.35 \
+    --output ./cone_result.mp4
 ```
 
-### ② 抽帧
+| 参数 | 说明 |
+|------|------|
+| `--model best.pt` | 训练好的锥桶检测模型 |
+| `--conf 0.35` | 置信度阈值（0.35 推荐，越低框越多） |
+| `--output` | 输出视频路径（默认 `output.mp4`） |
+
+---
+
+### 第三步：查看结果
+
 ```bash
-python3 extract_frames.py <bag文件路径> --interval 3 --max-frames 150
+# 用系统播放器打开
+xdg-open cone_result.mp4
+
+# 或在终端查看帧数/分辨率
+ffprobe cone_result.mp4
 ```
 
-### ③ 标注
+---
+
+## 🎮 运行时操作
+
+| 按键 | 功能 |
+|------|------|
+| `Q` | 退出 |
+| `空格` | 暂停 / 继续 |
+
+---
+
+## 📁 检测结果说明
+
+输出视频中，锥桶用**颜色框**区分：
+
+| 框色 | 类别 | 标签 |
+|:--:|------|------|
+| 🔴 红色框 | red | 红色锥桶 |
+| 🔵 蓝色框 | blue | 蓝色锥桶 |
+| 🩵 青色框 | yellow | 黄色锥桶 |
+
+> 每个框标注格式：`类别名 置信度`，如 `red 0.87`
+
+---
+
+## 🔄 对接实时摄像头
+
+效果满意后，可切换到摄像头实时检测：
+
 ```bash
-python3 cone_label_tool.py ./frames_to_label
+python3 ../YOLOv8/ultralytics/camera_detect.py --model best.pt
 ```
 
-### ④ 准备数据集
-```bash
-python3 prepare_dataset.py ./frames_to_label --labels ./labels --output ./cone_dataset
-```
+---
 
-### ⑤ 训练
-```bash
-python3 train_cone.py --data ./cone_dataset/data.yaml --epochs 100
-```
+## 📂 项目结构
 
-### ⑥ 推理
-```bash
-python3 bag_yolo_detect.py <bag文件路径> --model runs/detect/cone_detect/weights/best.pt
+```
+August_task/
+├── results/
+│   ├── bag_info.py           # 查看 bag 话题信息
+│   ├── bag_yolo_detect.py    # bag 视频流 YOLO 检测 + 保存 MP4
+│   ├── train_cone.py         # 训练脚本（台式机 CUDA）
+│   ├── prepare_voc_dataset.py # VOC→YOLO 格式转换
+│   ├── best.pt               # 训练好的锥桶检测模型
+│   └── cone_result.mp4       # 检测输出视频
+├── YOLOv8/ultralytics/
+│   └── camera_detect.py      # 实时摄像头检测
+├── fifth_week_tasks/         # ROS 工作空间 + 测试 bag
+└── TRAIN_GUIDE.md            # 台式机训练指南
 ```

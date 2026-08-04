@@ -5,7 +5,11 @@
     python3 bag_yolo_detect.py <bag文件路径> [--output 输出视频路径] [--conf 置信度阈值]
 
 示例：
-    python3 bag_yolo_detect.py ../fifth_week_tasks/src/plumbing_pub_sub/bag/2026-07-16-16-56-05.bag
+    # COCO 预训练模型（默认）
+    python3 bag_yolo_detect.py ../fifth_week_tasks/src/plumbing_pub_sub/bag/test.bag
+
+    # 自定义锥桶模型
+    python3 bag_yolo_detect.py ../fifth_week_tasks/src/plumbing_pub_sub/bag/test.bag --model best.pt
 
 环境要求：
     - Ubuntu 20.04
@@ -28,15 +32,41 @@ from sensor_msgs.msg import Image, CompressedImage
 
 from ultralytics import YOLO
 
-# ============ COCO 类别映射 ============
-# YOLOv8 COCO 预训练模型中没有 "traffic cone" 类别
-# 暂用以下近似类别替代锥桶检测：
-CONE_LIKE_CLASSES = {
-    9:  "traffic light",   # 交通信号灯（外形与锥桶有相似特征）
-    11: "stop sign",       # 停止标志
+# ============ 颜色定义 ============
+# 锥桶类别 → BGR 颜色
+CONE_COLORS = {
+    0:  (0, 0, 255),    # red   → 红色框
+    1:  (255, 0, 0),    # blue  → 蓝色框
+    2:  (0, 255, 255),  # yellow → 青色框
 }
-# 可选：如果只想看所有检测结果，设为 None
-# CONE_LIKE_CLASSES = None  # 显示所有 80 类 COCO 目标
+
+# COCO 默认颜色（其他类别用）
+COCO_COLORS = {
+    9:  (0, 255, 255),    # traffic light → 青色
+    11: (0, 165, 255),    # stop sign → 橙色
+}
+
+
+def is_custom_model(model):
+    """判断是否为自定义锥桶模型（非 COCO 80 类）"""
+    names = model.names if hasattr(model, 'names') else {}
+    # COCO 模型有 80 个类，第一个是 'person'
+    if len(names) == 80 and names.get(0, '').lower() == 'person':
+        return False
+    # 自定义锥桶模型通常 3 个类
+    if len(names) <= 5:
+        return True
+    return False
+
+
+def get_color_map(model):
+    """根据模型类型返回颜色映射表"""
+    if is_custom_model(model):
+        # 自定义锥桶模型：用锥桶专用颜色
+        return CONE_COLORS
+    else:
+        # COCO 模型：用默认颜色
+        return COCO_COLORS
 
 
 def get_bag_info(bag_path):
@@ -104,6 +134,16 @@ def process_bag(bag_path, image_topic, msg_type, output_path, conf_threshold, mo
     print(f"\n 加载 YOLOv8 模型: {model_path}")
     model = YOLO(model_path)
 
+    # --- 检测模型类型 ---
+    custom_model = is_custom_model(model)
+    color_map = get_color_map(model)
+    class_names = model.names if custom_model else None
+
+    if custom_model:
+        print(f"🔧 检测到自定义锥桶模型 ({len(model.names)} 类): {list(model.names.values())}")
+    else:
+        print(f"📦 COCO 预训练模型 (80 类)，只显示 traffic light / stop sign")
+
     # ---------- 初始化 CvBridge ----------
     bridge = CvBridge()
 
@@ -157,20 +197,22 @@ def process_bag(bag_path, image_topic, msg_type, output_path, conf_threshold, mo
                         cls_id = int(box.cls[0])
                         conf = float(box.conf[0])
 
-                        # 如果指定了锥桶近似类别，则只显示这些类
-                        if CONE_LIKE_CLASSES is not None and cls_id not in CONE_LIKE_CLASSES:
+                        # 自定义模型：显示所有类别（红/蓝/黄锥桶）
+                        # COCO 模型：只显示 traffic light (9) 和 stop sign (11)
+                        if not custom_model and cls_id not in (9, 11):
                             continue
 
                         # 边界框坐标
                         x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
-                        label = CONE_LIKE_CLASSES.get(cls_id, f"class_{cls_id}") if CONE_LIKE_CLASSES else results[0].names[cls_id]
-                        label_text = f"{label} {conf:.2f}"
 
-                        # 根据类别选择颜色
-                        color_map = {
-                            9:  (0, 255, 255),   # 黄色 - traffic light
-                            11: (0, 165, 255),   # 橙色 - stop sign
-                        }
+                        # 标签
+                        if custom_model and class_names:
+                            name = class_names.get(cls_id, f"cls_{cls_id}")
+                        else:
+                            name = results[0].names.get(cls_id, f"cls_{cls_id}")
+                        label_text = f"{name} {conf:.2f}"
+
+                        # 颜色
                         color = color_map.get(cls_id, (0, 255, 0))
 
                         # 绘制
@@ -300,10 +342,13 @@ def main():
     print(f"   消息类型:    {msg_type}")
     print(f"   置信度阈值:  {args.conf}")
     print(f"   输出视频:    {output_path}")
-    if CONE_LIKE_CLASSES:
-        print(f"   检测类别:    {list(CONE_LIKE_CLASSES.values())} (锥桶近似)")
+
+    # 预先加载模型判断类型
+    temp_model = YOLO(args.model)
+    if is_custom_model(temp_model):
+        print(f"   模型类型:    自定义锥桶检测 ({list(temp_model.names.values())})")
     else:
-        print(f"   检测类别:   全部 80 类 COCO 目标")
+        print(f"   模型类型:    COCO 预训练 (仅显示 traffic light / stop sign)")
     print("-" * 60)
 
     process_bag(
