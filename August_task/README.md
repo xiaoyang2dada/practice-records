@@ -1,6 +1,6 @@
 # FSAC 锥桶检测 — 推理使用指南
 
-> 模型已完成训练，以下为 bag 视频流 → YOLO 锥桶检测 → 结果展示的完整流程。
+> 模型已完成初次训练，以下为 bag 视频流 → YOLO 锥桶检测 → 结果展示的完整流程。
 
 ## 环境准备（Ubuntu 20.04 + ROS Noetic）
 
@@ -86,29 +86,10 @@ ffprobe cone_result.mp4
 
 ---
 
-## 🔄 对接实时摄像头
+## 🔄 对接实时摄像头（待实现）
 
 效果满意后，可切换到摄像头实时检测：
 
 ```bash
 python3 ../YOLOv8/ultralytics/camera_detect.py --model best.pt
-```
-
----
-
-## 📂 项目结构
-
-```
-August_task/
-├── results/
-│   ├── bag_info.py           # 查看 bag 话题信息
-│   ├── bag_yolo_detect.py    # bag 视频流 YOLO 检测 + 保存 MP4
-│   ├── train_cone.py         # 训练脚本（台式机 CUDA）
-│   ├── prepare_voc_dataset.py # VOC→YOLO 格式转换
-│   ├── best.pt               # 训练好的锥桶检测模型
-│   └── cone_result.mp4       # 检测输出视频
-├── YOLOv8/ultralytics/
-│   └── camera_detect.py      # 实时摄像头检测
-├── fifth_week_tasks/         # ROS 工作空间 + 测试 bag
-└── TRAIN_GUIDE.md            # 台式机训练指南
 ```
