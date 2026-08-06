@@ -127,22 +127,30 @@ def select_image_topic(image_topics):
             print("输入无效，请重试。")
 
 
-def process_bag(bag_path, image_topic, msg_type, output_path, conf_threshold, model_path):
+def process_bag(bag_path, image_topic, msg_type, output_path, conf_threshold, model_path, raw_mode=False):
     """主处理函数：逐帧读取 bag 图像 → YOLOv8 检测 → 显示 + 保存视频"""
 
     # ---------- 初始化 YOLOv8 ----------
-    print(f"\n 加载 YOLOv8 模型: {model_path}")
-    model = YOLO(model_path)
+    model = None
+    custom_model = False
+    color_map = {}
+    class_names = None
 
-    # --- 检测模型类型 ---
-    custom_model = is_custom_model(model)
-    color_map = get_color_map(model)
-    class_names = model.names if custom_model else None
+    if not raw_mode:
+        print(f"\n 加载 YOLOv8 模型: {model_path}")
+        model = YOLO(model_path)
 
-    if custom_model:
-        print(f"🔧 检测到自定义锥桶模型 ({len(model.names)} 类): {list(model.names.values())}")
+        # --- 检测模型类型 ---
+        custom_model = is_custom_model(model)
+        color_map = get_color_map(model)
+        class_names = model.names if custom_model else None
+
+        if custom_model:
+            print(f"🔧 检测到自定义锥桶模型 ({len(model.names)} 类): {list(model.names.values())}")
+        else:
+            print(f"📦 COCO 预训练模型 (80 类)，只显示 traffic light / stop sign")
     else:
-        print(f"📦 COCO 预训练模型 (80 类)，只显示 traffic light / stop sign")
+        print(f"\n📹 原始视频模式（跳过 YOLOv8 推理）")
 
     # ---------- 初始化 CvBridge ----------
     bridge = CvBridge()
@@ -185,12 +193,15 @@ def process_bag(bag_path, image_topic, msg_type, output_path, conf_threshold, mo
                 )
                 print(f"视频输出: {output_path}  ({w}x{h})")
 
-            # --- YOLOv8 推理 ---
-            results = model(cv_image, conf=conf_threshold, verbose=False)
+            # --- YOLOv8 推理（原始模式跳过） ---
+            if not raw_mode:
+                results = model(cv_image, conf=conf_threshold, imgsz=1280, iou=0.43, verbose=False)
+            else:
+                results = None
 
             # --- 绘制检测框 ---
             annotated_frame = cv_image.copy()
-            if results and len(results) > 0:
+            if not raw_mode and results and len(results) > 0:
                 boxes = results[0].boxes
                 if boxes is not None:
                     for box in boxes:
@@ -289,6 +300,11 @@ def main():
         action="store_true",
         help="显示所有 COCO 80 类目标 (默认只显示 traffic light 和 stop sign)"
     )
+    parser.add_argument(
+        "--raw", "-r",
+        action="store_true",
+        help="原始视频模式：跳过 YOLOv8 推理，直接输出 bag 原始视频"
+    )
     args = parser.parse_args()
 
     # 设置是否为锥桶近似模式
@@ -343,12 +359,15 @@ def main():
     print(f"   置信度阈值:  {args.conf}")
     print(f"   输出视频:    {output_path}")
 
-    # 预先加载模型判断类型
-    temp_model = YOLO(args.model)
-    if is_custom_model(temp_model):
-        print(f"   模型类型:    自定义锥桶检测 ({list(temp_model.names.values())})")
+    # 预先加载模型判断类型（原始模式跳过）
+    if not args.raw:
+        temp_model = YOLO(args.model)
+        if is_custom_model(temp_model):
+            print(f"   模型类型:    自定义锥桶检测 ({list(temp_model.names.values())})")
+        else:
+            print(f"   模型类型:    COCO 预训练 (仅显示 traffic light / stop sign)")
     else:
-        print(f"   模型类型:    COCO 预训练 (仅显示 traffic light / stop sign)")
+        print(f"   模式:        原始视频（无检测）")
     print("-" * 60)
 
     process_bag(
@@ -358,6 +377,7 @@ def main():
         output_path=output_path,
         conf_threshold=args.conf,
         model_path=args.model,
+        raw_mode=args.raw,
     )
 
 

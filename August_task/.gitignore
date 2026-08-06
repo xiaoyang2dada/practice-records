@@ -1,0 +1,24 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# ROS catkin 编译产物
+ros-pub/build/
+ros-pub/devel/
+ros-pub/install/
+pylon-ros-camera/build/
+
+# 大文件 / 数据
+*.bag
+*.mp4
+results/output.mp4
+
+# 模型权重（可重新训练）
+*.pt
+
+# 系统文件
+.DS_Store
+*.swp
+*.swo

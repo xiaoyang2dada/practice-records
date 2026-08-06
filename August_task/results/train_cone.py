@@ -57,7 +57,7 @@ def run_voc_conversion(dataset_dir):
         print("  请确保 prepare_voc_dataset.py 与本脚本在同一目录")
         return None
 
-    print(f"\n🔄 首次使用，自动转换 VOC 数据集...")
+    print(f"\n首次使用，自动转换 VOC 数据集...")
     print(f"   数据集: {dataset_dir}")
     print(f"   转换脚本: {convert_script}")
 
@@ -67,18 +67,18 @@ def run_voc_conversion(dataset_dir):
     try:
         result = subprocess.run(cmd, capture_output=False, text=True)
         if result.returncode != 0:
-            print("\n❌ 数据集转换失败！")
+            print("\n数据集转换失败！")
             return None
     except Exception as e:
-        print(f"\n❌ 运行转换脚本出错: {e}")
+        print(f"\n运行转换脚本出错: {e}")
         return None
 
     yaml_path = os.path.join(dataset_dir, "cone_data.yaml")
     if os.path.exists(yaml_path):
-        print(f"✅ 转换完成: {yaml_path}")
+        print(f"转换完成: {yaml_path}")
         return yaml_path
     else:
-        print(f"\n❌ 转换后未找到 data.yaml: {yaml_path}")
+        print(f"\n转换后未找到 data.yaml: {yaml_path}")
         return None
 
 
@@ -146,7 +146,7 @@ def main():
         dataset_dir = args.dataset or DEFAULT_DATASET_DIR
 
         if not os.path.isdir(dataset_dir):
-            print(f"❌ 数据集目录不存在: {dataset_dir}")
+            print(f"数据集目录不存在: {dataset_dir}")
             print(f"   请通过 --dataset 或 --data 指定正确路径")
             sys.exit(1)
 
@@ -158,7 +158,7 @@ def main():
         elif os.path.exists(expected_yaml):
             # 已有 yaml，直接使用
             data_yaml = expected_yaml
-            print(f"📁 使用已有配置: {data_yaml}")
+            print(f"使用已有配置: {data_yaml}")
         else:
             # 需要转换 VOC → YOLO
             if not args.skip_convert:
@@ -166,12 +166,12 @@ def main():
                 if data_yaml is None:
                     sys.exit(1)
             else:
-                print(f"❌ 未找到 data.yaml 且指定了 --skip-convert")
+                print(f"未找到 data.yaml 且指定了 --skip-convert")
                 sys.exit(1)
 
     # 最终验证
     if not data_yaml or not os.path.exists(data_yaml):
-        print(f"❌ data.yaml 不存在: {data_yaml}")
+        print(f"data.yaml 不存在: {data_yaml}")
         sys.exit(1)
 
     # 转为绝对路径（YOLOv8 需要）
