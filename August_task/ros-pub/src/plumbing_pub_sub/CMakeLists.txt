@@ -14,7 +14,6 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   geometry_msgs
   visualization_msgs
-  rviz_visual_tools
 )
 
 ## System dependencies are found with CMake's conventions
@@ -112,7 +111,7 @@ generate_messages(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES plumbing_pub_sub
- CATKIN_DEPENDS roscpp rospy std_msgs geometry_msgs message_runtime visualization_msgs rviz_visual_tools
+ CATKIN_DEPENDS roscpp rospy std_msgs geometry_msgs message_runtime visualization_msgs
 #  DEPENDS system_lib
 )
 

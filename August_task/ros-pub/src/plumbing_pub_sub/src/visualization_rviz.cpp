@@ -3,7 +3,6 @@
 #include "plumbing_pub_sub/ConeArray.h"
 #include "visualization_msgs/Marker.h"
 #include "visualization_msgs/MarkerArray.h"
-#include "rviz_visual_tools/rviz_visual_tools.h"
 
 ros::Publisher g_marker_pub;
 

@@ -200,3 +200,134 @@ python3 train_cone.py --data ./cone_dataset/data.yaml --epochs 100
 ```bash
 python3 bag_yolo_detect.py <bag文件路径> --model best.pt
 ```
+
+---
+
+## 🎯 正常使用教程（感知系统日常操作）
+
+### 场景一：用 bag 测试全链路（无相机时）
+
+```bash
+# 1. 环境准备（每个终端都要 source）
+source /opt/ros/noetic/setup.bash
+source ~/桌面/August_task/ros-pub/devel/setup.bash
+export ROS_HOSTNAME=localhost
+export ROS_MASTER_URI=http://localhost:11311
+
+# 2. 一键启动（roscore + 检测 + 坐标转换 + 可视化 + bag回放）
+roslaunch plumbing_pub_sub perception.launch \
+    bag_path:=~/桌面/August_task/ros-pub/src/plumbing_pub_sub/bag/2026-07-16-16-56-05.bag \
+    model_path:=~/桌面/August_task/results/best.pt
+```
+
+**启动后看什么：**
+- 终端滚动 YOLO 日志 `检测到 X 个锥桶`
+- RViz 弹出，显示红/蓝锥桶方体
+- 打开新终端看数据：`rostopic echo /yolov7/yolov7/all_cones -n 1`
+
+### 场景二：上车实时检测（有相机时）
+
+```bash
+# 1. GigE 相机配 IP（首次）
+roslaunch pylon_camera pylon_camera_ip_configuration.launch
+
+# 2. 直接启动感知（自动订阅 /pylon_camera_node/image_raw）
+roslaunch plumbing_pub_sub perception.launch \
+    model_path:=~/桌面/August_task/results/best.pt
+```
+
+### 场景三：手动分步调试
+
+| 终端 | 命令 | 作用 |
+|------|------|------|
+| 1 | `roscore` | ROS 大脑 |
+| 2 | `~/桌面/August_task/ros-pub/devel/lib/plumbing_pub_sub/cone_detector.py _model_path:=.../best.pt _imgsz:=640` | YOLO 检测 |
+| 3 | `rosbag play .../bag/xxx.bag --topic /pylon_camera_node/image_raw -r 0.5` | 喂图像 |
+| 4 | `rostopic echo /yolov7/yolov7/all_cones -n 1` | 看锥桶坐标 |
+
+### 调试检测效果（调参）
+
+```bash
+# 误检多 → 提高置信度
+roslaunch plumbing_pub_sub perception.launch \
+    bag_path:=... conf_threshold:=0.7
+
+# 漏检多 → 降低置信度 + 提高分辨率
+roslaunch plumbing_pub_sub perception.launch \
+    bag_path:=... conf_threshold:=0.25 imgsz:=1280
+
+# 锥桶抖动（重叠框多）→ 提高 IoU
+roslaunch plumbing_pub_sub perception.launch \
+    bag_path:=... iou_threshold:=0.7
+
+# 推理跟不上 → 降低 bag 倍速
+roslaunch plumbing_pub_sub perception.launch \
+    bag_path:=... bag_rate:=0.25
+```
+
+### 替换新训练模型
+
+```bash
+# 训练好的模型放到 results/ 下
+roslaunch plumbing_pub_sub perception.launch \
+    bag_path:=... \
+    model_path:=~/桌面/August_task/results/新模型.pt
+```
+
+### 查看感知结果
+
+```bash
+# 话题频率（确认在发）
+rostopic hz /yolov7/yolov7/all_cones
+
+# 锥桶车体坐标（X前 Y左 Z上）
+rostopic echo /yolov7/yolov7/all_cones -n 1
+
+# RViz 可视化话题
+rostopic echo /visual/cones -n 1
+```
+
+---
+
+## 🔧 日常维护
+
+### 修改代码后重编译
+
+```bash
+cd ~/桌面/August_task/ros-pub
+catkin_make
+
+# ⚠️ 必做：catkin_make 会重置 Python relay 的 shebang
+sed -i '1s|#!/usr/bin/python3|#!/home/xiaoyang/桌面/August_task/.venv/bin/python3|' \
+    devel/lib/plumbing_pub_sub/cone_detector.py
+```
+
+### 清理 ROS 日志 / 重启
+
+```bash
+rosclean purge    # 清日志
+killall -9 rosmaster roscore 2>/dev/null  # 强制重启 master
+```
+
+### 环境变量（写入 ~/.bashrc 免每次配置）
+
+```bash
+echo 'source /opt/ros/noetic/setup.bash' >> ~/.bashrc
+echo 'source ~/桌面/August_task/ros-pub/devel/setup.bash' >> ~/.bashrc
+echo 'export ROS_HOSTNAME=localhost' >> ~/.bashrc
+echo 'export ROS_MASTER_URI=http://localhost:11311' >> ~/.bashrc
+```
+
+---
+
+## 🐞 常见问题速查
+
+| 现象 | 原因 | 解决 |
+|------|------|------|
+| `rosrun: command not found` | venv 污染 PATH | `deactivate` 退出 venv |
+| `exit code -9` (进程被杀) | 内存不足 OOM | `imgsz:=320`，关 GUI |
+| `rostopic echo` 卡住 | master 挂了 / URI 错 | 确认 `ROS_MASTER_URI=localhost:11311` |
+| RViz 没显示 | MarkerArray 话题不对 | 检查 RViz 里 Topic=`/visual/cones` |
+| `ModuleNotFoundError: ultralytics` | catkin_make 重置了 relay | 重跑 shebang 修复命令 |
+| `rosbag play` 打不开文件 | `~` 没展开 | 用绝对路径或 `$HOME` |
+| 锥桶坐标偏斜 | 相机内参/安装未标定 | 重标定后更新 `fx/fy/cx/cy/camera_*` |
