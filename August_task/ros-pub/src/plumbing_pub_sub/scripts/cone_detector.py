@@ -116,6 +116,9 @@ class ConeDetector:
         # 主话题：3D 锥桶位置（下游坐标转换用）
         self.cone_pub = rospy.Publisher("/test/camera_cones", ConeArray, queue_size=10)
 
+        # 检测标注图像（RViz 中显示）
+        self.annotated_pub = rospy.Publisher("/test/camera_annotated", Image, queue_size=5)
+
         # 可选：2D 检测结果（带检测框和置信度）
         if self.publish_2d:
             self.cone_2d_pub = rospy.Publisher(
@@ -238,19 +241,31 @@ class ConeDetector:
                         det_2d.color = CLASS_ID_TO_COLOR[cls_id]
                         cone_2d_array.cones.append(det_2d)
 
-                    # ---- GUI 绘制（可选） ----
-                    if self.show_gui:
-                        color = CONE_BGR_COLORS.get(cls_id, (0, 255, 0))
-                        label = f"{CLASS_ID_TO_COLOR[cls_id]} {conf:.2f}"
-                        cv2.rectangle(cv_image, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
-                        cv2.putText(cv_image, label, (int(x1), int(y1) - 8),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                    # ---- 绘制检测框（始终绘制，用于发布标注图像） ----
+                    color = CONE_BGR_COLORS.get(cls_id, (0, 255, 0))
+                    label = f"{CLASS_ID_TO_COLOR[cls_id]} {conf:.2f}"
+                    cv2.rectangle(cv_image, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
+                    cv2.putText(cv_image, label, (int(x1), int(y1) - 8),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
-        # ---- 发布 ----
+        # ---- 发布锥桶坐标 ----
         self.cone_pub.publish(cone_array)
 
         if self.publish_2d:
             self.cone_2d_pub.publish(cone_2d_array)
+
+        # ---- 发布标注图像（RViz 可订阅 /test/camera_annotated） ----
+        annotated = cv2.resize(cv_image, None, fx=0.5, fy=0.5)  # 缩小节省带宽
+        img_msg = Image()
+        img_msg.header.stamp = header.stamp if hasattr(header, 'stamp') else rospy.Time.now()
+        img_msg.header.frame_id = header.frame_id if header.frame_id else "camera_frame"
+        img_msg.height = annotated.shape[0]
+        img_msg.width = annotated.shape[1]
+        img_msg.encoding = "bgr8"
+        img_msg.is_bigendian = False
+        img_msg.step = annotated.shape[1] * 3
+        img_msg.data = annotated.tobytes()
+        self.annotated_pub.publish(img_msg)
 
         # 定时日志
         seq = header.seq if hasattr(header, 'seq') else 0

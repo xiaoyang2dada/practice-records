@@ -84,6 +84,19 @@ void doConeMsg(const plumbing_pub_sub::ConeArray::ConstPtr& msg)
         marker_array.markers.push_back(marker);
     }
 
+    // 删除上一帧多余的锥桶（数量减少时防幽灵锥桶）
+    static int last_max_id = 0;
+    int current_count = msg->cones.size();
+    for (int i = current_count; i < last_max_id; i++)
+    {
+        visualization_msgs::Marker del;
+        del.action = visualization_msgs::Marker::DELETE;
+        del.ns = "car_cones";
+        del.id = i;
+        marker_array.markers.push_back(del);
+    }
+    last_max_id = current_count;
+
     g_marker_pub.publish(marker_array);
     ROS_INFO("可视化数据正常发布中...");
 }

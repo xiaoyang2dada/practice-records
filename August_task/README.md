@@ -225,16 +225,32 @@ roslaunch plumbing_pub_sub perception.launch \
 - RViz 弹出，显示红/蓝锥桶方体
 - 打开新终端看数据：`rostopic echo /yolov7/yolov7/all_cones -n 1`
 
-### 场景二：上车实时检测（有相机时）
+### 场景二：上车实时检测（有相机时，无需 pylon C++ SDK）
+
+> 前提：相机必须插 **USB3.0** 口；首次使用需 `pip install pypylon` 到 venv
 
 ```bash
-# 1. GigE 相机配 IP（首次）
-roslaunch pylon_camera pylon_camera_ip_configuration.launch
+# -------- 终端1：启动 ROS Master --------
+source /opt/ros/noetic/setup.bash
+roscore
 
-# 2. 直接启动感知（自动订阅 /pylon_camera_node/image_raw）
+# -------- 终端2：启动相机图像桥接 --------
+source /opt/ros/noetic/setup.bash
+source ~/桌面/git/practice-records-main/August_task/ros-pub/devel/setup.bash
+rosrun plumbing_pub_sub pylon_image_publisher.py
+
+# -------- 终端3：启动感知全链路（看到 "开始发布图像" 后执行） --------
+source /opt/ros/noetic/setup.bash
+source ~/桌面/git/practice-records-main/August_task/ros-pub/devel/setup.bash
 roslaunch plumbing_pub_sub perception.launch \
-    model_path:=~/桌面/August_task/results/best.pt
+    model_path:=~/桌面/git/practice-records-main/August_task/results/best.pt \
+    conf_threshold:=0.3 iou_threshold:=0.5 imgsz:=960
 ```
+
+**启动后看什么：**
+- 终端3 滚动 `=== 接收锥桶: N 个 ===` 日志
+- RViz 弹出锥桶 3D 方体（`/visual/cones`），Subcribe `/test/camera_annotated` 可看检测标注画面
+- `rostopic echo /yolov7/yolov7/all_cones -n 1` 看锥桶车体坐标
 
 ### 场景三：手动分步调试
 
