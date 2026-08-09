@@ -103,27 +103,35 @@ cd src/perception_ws
 source /opt/ros/noetic/setup.bash
 catkin_make --only-pkg-with-deps main_pkg dnb_msgs camera_control_msgs
 
-# 必做：修复 Python relay 的 shebang（否则找不到 ultralytics/pypylon）
-sed -i '1s|#!/usr/bin/python3|#!/home/xiaoyang/桌面/git/practice-records-main/August_task/.venv/bin/python3|' \
-    devel/lib/main_pkg/cone_detector.py devel/lib/main_pkg/pylon_image_publisher.py
+# 必做：修复 Python relay 的 shebang，否则找不到 ultralytics/pypylon
+VENV=$(cd ../.. && pwd)/.venv/bin/python3
+sed -i "1s|#!/usr/bin/python3|#!$VENV|" \
+    devel/lib/main_pkg/cone_detector.py \
+    devel/lib/main_pkg/pylon_image_publisher.py
 ```
 
 ---
 
 ## 快速启动
 
+> 所有命令在 **项目根目录**（August_task/）下执行。先 `cd` 进来：
+> ```bash
+> cd ~/桌面/git/practice-records-main/August_task   # 改成你的实际路径
+> ```
+
 ### 场景一：用 bag 测试全链路（无相机时）
 
 ```bash
-# 环境（每个终端都要）
+# 环境（每个终端都要先 cd 到项目根目录）
 source /opt/ros/noetic/setup.bash
-source ~/桌面/git/practice-records-main/August_task/src/perception_ws/devel/setup.bash
+source src/perception_ws/devel/setup.bash
 export ROS_HOSTNAME=localhost
 export ROS_MASTER_URI=http://localhost:11311
 
 # 一键启动
+# bag 文件需自备（4.7GB 不上传 GitHub），放入 src/main_pkg/bag/ 后替换下方路径
 roslaunch main_pkg perception.launch \
-    bag_path:=src/main_pkg/bag/2026-07-16-16-56-05.bag \
+    bag_path:=src/main_pkg/bag/<你的bag文件.bag> \
     model_path:=src/weights/trained/best.pt \
     conf_threshold:=0.3 iou_threshold:=0.5 imgsz:=960 bag_rate:=0.5
 ```
@@ -136,6 +144,7 @@ roslaunch main_pkg perception.launch \
 ### 场景二：上车实时检测（有相机时，无需 pylon C++ SDK）
 
 > 前提：相机必须插 **USB3.0** 口；首次需 `pip install pypylon` 到 venv
+> 所有终端先 `cd` 到项目根目录
 
 ```bash
 # 终端1：ROS Master
@@ -146,16 +155,16 @@ roscore
 ```bash
 # 终端2：相机图像桥接
 source /opt/ros/noetic/setup.bash
-source ~/桌面/git/practice-records-main/August_task/src/perception_ws/devel/setup.bash
+source src/perception_ws/devel/setup.bash
 rosrun main_pkg pylon_image_publisher.py
 ```
 
 ```bash
 # 终端3：感知全链路（看到 "开始发布图像" 后执行）
 source /opt/ros/noetic/setup.bash
-source ~/桌面/git/practice-records-main/August_task/src/perception_ws/devel/setup.bash
+source src/perception_ws/devel/setup.bash
 roslaunch main_pkg perception.launch \
-    model_path:=~/桌面/git/practice-records-main/August_task/src/weights/trained/best.pt \
+    model_path:=src/weights/trained/best.pt \
     conf_threshold:=0.3 iou_threshold:=0.5 imgsz:=960
 ```
 
@@ -210,16 +219,20 @@ python3 bag_yolo_detect.py <bag文件路径> --model ../weights/trained/best.pt
 
 ## 日常维护
 
+> 所有命令在项目根目录下执行
+
 ### 修改代码后重编译
 
 ```bash
-cd ~/桌面/git/practice-records-main/August_task/src/perception_ws
+cd src/perception_ws
 source /opt/ros/noetic/setup.bash
 catkin_make --only-pkg-with-deps main_pkg
 
 # 必做：修复 relay shebang
-sed -i '1s|#!/usr/bin/python3|#!/home/xiaoyang/桌面/git/practice-records-main/August_task/.venv/bin/python3|' \
-    devel/lib/main_pkg/cone_detector.py devel/lib/main_pkg/pylon_image_publisher.py
+VENV=$(cd ../.. && pwd)/.venv/bin/python3
+sed -i "1s|#!/usr/bin/python3|#!$VENV|" \
+    devel/lib/main_pkg/cone_detector.py \
+    devel/lib/main_pkg/pylon_image_publisher.py
 ```
 
 ### 替换新训练模型
@@ -239,9 +252,11 @@ killall -9 roslaunch rosmaster roscore  # 强制重启 master（每次启动前�
 
 ### 环境变量（写入 ~/.bashrc 免每次配置）
 
+在项目根目录下执行：
 ```bash
+PROJ=$(pwd)
 echo 'source /opt/ros/noetic/setup.bash' >> ~/.bashrc
-echo 'source ~/桌面/git/practice-records-main/August_task/src/perception_ws/devel/setup.bash' >> ~/.bashrc
+echo "source $PROJ/src/perception_ws/devel/setup.bash" >> ~/.bashrc
 echo 'export ROS_HOSTNAME=localhost' >> ~/.bashrc
 echo 'export ROS_MASTER_URI=http://localhost:11311' >> ~/.bashrc
 ```
