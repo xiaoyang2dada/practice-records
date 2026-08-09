@@ -30,7 +30,7 @@ source src/perception_ws/devel/setup.bash
 
 roslaunch main_pkg perception.launch \
     bag_path:=src/main_pkg/bag/<你的bag文件>.bag \
-    model_path:=src/weights/trained/best.pt
+    model_path:=src/weights/trained/YOLOv8/best.pt
 ```
 
 > 提示：bag 文件如果提示 `bag unindexed`，先运行 `rosbag reindex <文件>` 修复。

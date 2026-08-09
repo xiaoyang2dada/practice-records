@@ -11,6 +11,7 @@ __pycache__/
 src/perception_ws/build/
 src/perception_ws/devel/
 src/perception_ws/install/
+.catkin_workspace
 
 # 大文件 / 数据
 *.bag

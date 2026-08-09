@@ -6,7 +6,7 @@ camera_detect.py — 摄像头实时锥桶检测
     python camera_detect.py
 
     # 用训练好的锥桶模型
-    python camera_detect.py --model ../weights/trained/best.pt
+    python camera_detect.py --model ../weights/trained/YOLOv8/best.pt
 
     # 指定摄像头 + 置信度
     python camera_detect.py --model best.pt --camera 0 --conf 0.5

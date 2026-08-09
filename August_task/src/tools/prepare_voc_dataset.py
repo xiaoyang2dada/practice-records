@@ -314,9 +314,9 @@ names:
         print(f"  {name}: {class_counts[name]}")
     print(f"\n开始训练 (Windows):")
     print(f"  cd results")
-    print(f"  python train_cone.py --data \"{yaml_path}\"")
+    print(f"  python train.py --data \"{yaml_path}\"")
     print(f"\n或直接使用默认路径一键训练:")
-    print(f"  python train_cone.py")
+    print(f"  python train.py")
 
 
 if __name__ == "__main__":

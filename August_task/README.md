@@ -12,6 +12,7 @@ August_task/
 │   │   ├── scripts/                   
 │   │   │   ├── cone_detector.py,
 │   │   │   ├── pylon_image_publisher.py
+│   │   │   ├── cone_detector.sh  # 手动调试用
 │   │   ├── cpp/                       
 │   │   │   ├── demo01_sub.cpp
 │   │   │   ├── visualization_rviz.cpp
@@ -21,15 +22,15 @@ August_task/
 │   ├── perception_ws/          # 工作空间
 │   │   └── src/main_pkg → ../../main_pkg
 │   ├── tools
-│   │   ├── train_cone.py       # YOLOv8 模型训练
 │   │   ├── bag_yolo_detect.py  # bag 视频流推理
 │   │   ├── cone_label_tool.py  # 交互式锥桶标注
-│   │   └── extract_frames.py   # 抽帧
-│   ├── models                  # 模型代码
-│   │   ├── YOLOv8              # YOLOv8
-│   │   │   └── ultralytics/    
+│   │   ├── extract_frames.py   # 抽帧
+│   │   ├── prepare_dataset.py / prepare_voc_dataset.py
+│   ├── models                  # 各模型训练入口
+│   │   ├── YOLOv8/train.py     # YOLOv8 训练脚本
+│   │   │   └── ultralytics/camera_detect.py
 │   ├── weights                 # 模型权重
-│   │   ├── trained/best.pt     # 训练好的锥桶模型
+│   │   ├── trained/YOLOv8/best.pt   # 训练好的锥桶模型
 │   │   └── pretrained/yolov8n.pt
 │   └── requirements.txt
 ```
@@ -131,7 +132,7 @@ export ROS_MASTER_URI=http://localhost:11311
 # bag 文件需自备（4.7GB 不上传 GitHub），放入 src/main_pkg/bag/ 后替换下方路径
 roslaunch main_pkg perception.launch \
     bag_path:=src/main_pkg/bag/<你的bag文件.bag> \
-    model_path:=src/weights/trained/best.pt \
+    model_path:=src/weights/trained/YOLOv8/best.pt \
     conf_threshold:=0.3 iou_threshold:=0.5 imgsz:=960 bag_rate:=0.5
 ```
 
@@ -163,7 +164,7 @@ rosrun main_pkg pylon_image_publisher.py
 source /opt/ros/noetic/setup.bash
 source src/perception_ws/devel/setup.bash
 roslaunch main_pkg perception.launch \
-    model_path:=src/weights/trained/best.pt \
+    model_path:=src/weights/trained/YOLOv8/best.pt \
     conf_threshold:=0.3 iou_threshold:=0.5 imgsz:=960
 ```
 
@@ -207,11 +208,11 @@ python3 cone_label_tool.py ./frames_to_label
 # ④ 准备数据集
 python3 prepare_dataset.py ./frames_to_label --labels ./labels --output ./cone_dataset
 
-# ⑤ 训练（模型输出到 weights/trained/）
-python3 train_cone.py --data ./cone_dataset/data.yaml --epochs 100
+# ⑤ 训练（模型输出到 weights/trained/YOLOv8/）
+python3 models/YOLOv8/train.py --data ./cone_dataset/data.yaml --epochs 100
 
 # ⑥ 推理（离线）
-python3 bag_yolo_detect.py <bag文件路径> --model ../weights/trained/best.pt
+python3 bag_yolo_detect.py <bag文件路径> --model ../weights/trained/YOLOv8/best.pt
 ```
 
 ---
@@ -239,7 +240,7 @@ sed -i "1s|#!/usr/bin/python3|#!$VENV|" \
 ```bash
 # 训练好的 best.pt 放入 src/weights/trained/ 后
 roslaunch main_pkg perception.launch \
-    model_path:=src/weights/trained/best.pt
+    model_path:=src/weights/trained/YOLOv8/best.pt
 ```
 
 ### 清理 / 重启

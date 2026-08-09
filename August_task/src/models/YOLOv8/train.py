@@ -1,23 +1,23 @@
 """
-train_cone.py — FSAC 锥桶检测 YOLOv8 训练脚本 (Windows / Linux 通用)
+train.py — FSAC 锥桶检测 YOLOv8 训练脚本 (Windows / Linux 通用)
 ====================================================================
 使用 YOLOv8 训练 FSAC 比赛锥桶检测模型。
 
 用法：
   # 方式1：直接指定外部数据集目录（自动转换 VOC→YOLO）
-  python train_cone.py --dataset "F:/桌面/dataset/my(BUAA+FZU+WUST)"
+  python train.py --dataset "F:/桌面/dataset/my(BUAA+FZU+WUST)"
 
   # 方式2：指定已准备好的 data.yaml
-  python train_cone.py --data "F:/桌面/dataset/my(BUAA+FZU+WUST)/cone_data.yaml"
+  python train.py --data "F:/桌面/dataset/my(BUAA+FZU+WUST)/cone_data.yaml"
 
   # 方式3：无参数运行（使用默认数据集路径）
-  python train_cone.py
+  python train.py
 
   # 指定模型和参数
-  python train_cone.py --model yolov8s.pt --epochs 150 --batch 8
+  python train.py --model yolov8s.pt --epochs 150 --batch 8
 
   # 从已有权重继续训练
-  python train_cone.py --model runs/detect/cone_detect/weights/last.pt --resume
+  python train.py --model runs/detect/cone_detect/weights/last.pt --resume
 
 模型选择建议：
   yolov8n.pt  - 最小最快，适合低配机器 (3.2M 参数)
@@ -50,11 +50,11 @@ def detect_device():
 def run_voc_conversion(dataset_dir):
     """调用 prepare_voc_dataset.py 转换 VOC 数据集"""
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    convert_script = os.path.join(script_dir, "prepare_voc_dataset.py")
+    convert_script = os.path.normpath(os.path.join(script_dir, "../../tools/prepare_voc_dataset.py"))
 
     if not os.path.exists(convert_script):
-        print(f"⚠ 找不到转换脚本: {convert_script}")
-        print("  请确保 prepare_voc_dataset.py 与本脚本在同一目录")
+        print(f" 转换脚本: {convert_script}")
+        print("  请确保 tools/prepare_voc_dataset.py 存在")
         return None
 
     print(f"\n首次使用，自动转换 VOC 数据集...")
@@ -89,16 +89,16 @@ def main():
         epilog="""
 示例:
   # 最简单用法（自动检测 GPU + 默认数据集）
-  python train_cone.py
+  python train.py
 
   # 指定数据集目录（自动转换 VOC XML）
-  python train_cone.py --dataset "F:/桌面/dataset/my(BUAA+FZU+WUST)"
+  python train.py --dataset "F:/桌面/dataset/my(BUAA+FZU+WUST)"
 
   # CPU 训练 + 小批次
-  python train_cone.py --device cpu --batch 4 --epochs 50
+  python train.py --device cpu --batch 4 --epochs 50
 
   # GPU 训练 + 大模型
-  python train_cone.py --model yolov8s.pt --batch 16 --epochs 200
+  python train.py --model yolov8s.pt --batch 16 --epochs 200
 """
     )
 
