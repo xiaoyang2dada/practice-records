@@ -73,10 +73,10 @@ void doMsg(const main_pkg::ConeArray::ConstPtr &msg)
         double Yc = (g_cy - v) * depth / g_fy;   // cy-v, 非 v-cy!
         double Zc = depth;
 
-        // 2. 相机→车体: R=[[0,0,1],[-1,0,0],[0,1,0]]
-        double car_x =  Zc + g_tx;    // 0*Xc + 0*Yc + 1*Zc + tx
-        double car_y = -Xc + g_ty;    // -1*Xc + 0*Yc + 0*Zc + ty
-        double car_z =  Yc + g_tz;    // 0*Xc + 1*Yc + 0*Zc + tz
+        // 2. 相机→车体: R=[[0,0,1],[-1,0,0],[0,1,0]]，高度固定0（锥桶同平面）
+        double car_x =  Zc + g_tx;
+        double car_y = -Xc + g_ty;
+        double car_z = 0.0;
 
         ROS_INFO("  锥桶[%zu]: px(%.0f,%.0f) d=%.2f → car(%.2f,%.2f,%.2f)m %s",
                  i+1, u, v, depth, car_x, car_y, car_z, msg->cones[i].color.c_str());

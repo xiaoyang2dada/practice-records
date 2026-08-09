@@ -43,9 +43,15 @@ class ConeDetector:
         # 读取参数
         image_topic = rospy.get_param("~image_topic", "/pylon_camera_node/image_raw")
         model_path = rospy.get_param("~model_path", "yolov8n.pt")
-        conf_threshold = rospy.get_param("~conf_threshold", 0.5)
-        iou_threshold  = rospy.get_param("~iou_threshold", 0.45)   # NMS IoU 阈值
-        imgsz = rospy.get_param("~imgsz", 320)           # 推理尺寸，小值省内存
+
+        # roslaunch 子进程 CWD 不确定，相对路径转为基于项目根目录的绝对路径
+        # realpath 解析软链接到真实源码位置（src/main_pkg/scripts），上三级即项目根
+        if not os.path.isabs(model_path):
+            model_path = os.path.abspath(os.path.join(
+                os.path.dirname(os.path.realpath(__file__)), '../../..', model_path))
+        conf_threshold = rospy.get_param("~conf_threshold", 0.4)
+        iou_threshold  = rospy.get_param("~iou_threshold", 0.55)   # NMS IoU 阈值
+        imgsz = rospy.get_param("~imgsz", 960)           # 推理尺寸，小值省内存
         self.publish_2d = rospy.get_param("~publish_2d", False)
         self.show_gui = rospy.get_param("~show_gui", False)
         self.fy_est = rospy.get_param("~fy_depth", 1000.0)  # 深度估算用 fy
@@ -87,7 +93,7 @@ class ConeDetector:
             rospy.loginfo(f"同时发布 2D 检测结果到: /test/camera_cones_2d")
 
     def _subscribe_image_topic(self, topic_name):
-        """等待图像话题出现，自动匹配消息类型后订阅"""
+        # 等待图像话题出现，自动匹配消息类型后订阅
         rospy.loginfo(f"等待图像话题: {topic_name} ...")
 
         # 轮询等待话题在ROS master中注册（最多等 15 秒）
