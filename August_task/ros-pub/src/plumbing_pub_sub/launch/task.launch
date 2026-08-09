@@ -1,6 +1,0 @@
-<launch>
-    <node pkg="plumbing_pub_sub" type="demo01_sub" name="demo01_sub" output="screen" />
-    <node pkg="plumbing_pub_sub" type="visualization_rviz" name="visualization_rviz" output="screen" />
-    <node pkg="rviz" type="rviz" name="rviz" output="screen" args="-d $(find plumbing_pub_sub)/rviz/config.rviz" />
-    <node pkg="rosbag" type="play" name="rosbag_play" output="screen" args="$(find plumbing_pub_sub)/bag/test.bag" />
-</launch>
