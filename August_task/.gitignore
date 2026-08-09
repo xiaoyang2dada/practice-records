@@ -8,15 +8,13 @@ __pycache__/
 .vscode/
 
 # ROS catkin 编译产物
-ros-pub/build/
-ros-pub/devel/
-ros-pub/install/
-pylon-ros-camera/build/
+src/perception_ws/build/
+src/perception_ws/devel/
+src/perception_ws/install/
 
 # 大文件 / 数据
 *.bag
 *.mp4
-results/output.mp4
 
 # 系统文件
 .DS_Store

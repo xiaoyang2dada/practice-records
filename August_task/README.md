@@ -54,7 +54,7 @@ August_task/
 │ → /visual/cones          │  红蓝锥桶方体
 └──────────┬───────────────┘
            ↓
-        RViz 显示
+       🖥️ RViz 显示
 ```
 
 ### 接口规范（给下一组）
@@ -89,7 +89,6 @@ cd August_task
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r src/requirements.txt
-pip install -i https://pypi.tuna.tsinghua.edu.cn/simple pypylon empy==3.3.4
 
 # 让 venv Python 能找到 ROS 包
 echo "/opt/ros/noetic/lib/python3/dist-packages" >> .venv/lib/python3.*/site-packages/ros.pth
@@ -143,7 +142,7 @@ roslaunch main_pkg perception.launch \
 
 ### 场景二：上车实时检测（有相机时，无需 pylon C++ SDK）
 
-> 前提：相机必须插 **USB3.0** 口；首次需 `pip install pypylon` 到 venv
+> 前提：相机必须插 **USB3.0** 口；首次需 `pip install -r src/requirements.txt`
 > 所有终端先 `cd` 到项目根目录
 
 ```bash
