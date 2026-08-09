@@ -4,6 +4,9 @@ __pycache__/
 *.pyc
 *.pyo
 
+# VS Code 本地配置（不上传）
+.vscode/
+
 # ROS catkin 编译产物
 ros-pub/build/
 ros-pub/devel/
