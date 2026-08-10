@@ -73,6 +73,7 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+.venv-yolo26/
 
 # ===== ROS =====
 devel/

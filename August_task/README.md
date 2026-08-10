@@ -27,11 +27,14 @@ August_task/
 │   │   ├── extract_frames.py   # 抽帧
 │   │   ├── prepare_dataset.py / prepare_voc_dataset.py
 │   ├── models                  # 各模型训练入口
-│   │   ├── YOLOv8/train.py     # YOLOv8 训练脚本
+│   │   ├── YOLOv8/train.py     # YOLOv8 训练脚本（主环境 .venv）
+│   │   │   └── ultralytics/camera_detect.py
+│   │   ├── YOLOv26/train.py    # YOLOv26 训练脚本（独立环境 .venv-yolo26）
 │   │   │   └── ultralytics/camera_detect.py
 │   ├── weights                 # 模型权重
-│   │   ├── trained/YOLOv8/best.pt   # 训练好的锥桶模型
-│   │   └── pretrained/yolov8n.pt
+│   │   ├── trained/YOLOv8/best.pt   # YOLOv8 训练好的锥桶模型
+│   │   ├── trained/YOLOv26/         # YOLOv26 训练输出
+│   │   └── pretrained/              # 预训练权重 yolov8n.pt / yolo26n.pt
 │   └── requirements.txt
 ```
 
@@ -96,6 +99,53 @@ echo "/opt/ros/noetic/lib/python3/dist-packages" >> .venv/lib/python3.*/site-pac
 echo "$(pwd)/src/perception_ws/devel/lib/python3/dist-packages" >> .venv/lib/python3.*/site-packages/ros.pth
 ```
 
+> **只用训练好的模型跑系统？** 到此为止即可，无需配置任何训练环境。
+> 装 ultralytics 时 torch 等会自动带上，主环境 `.venv` 既能推理（用 `src/weights/trained/` 下的 best.pt），也能训练 YOLOv8。
+> 需要自己训练模型时，再看下方「训练者配置（可选）」。
+
+### 2a. 训练者配置（可选）
+
+> 仅当你需要**自己训练/微调模型**时才需要看这节。普通用户跳过。
+
+- **训练 YOLOv8**：直接用主环境 `.venv`（第 2 步已装好），按「工作流程」第 ⑤ 步操作即可，无需额外配置。
+- **训练 YOLOv26**：需要额外独立环境 `.venv-yolo26`（因 YOLO26 架构只在 GitHub main 版 ultralytics 中），见下方「2b」。
+
+### 2b. YOLO26 独立环境（可选，仅训练/用 YOLOv26 时需要）
+
+> YOLO26 目前**不在 PyPI**（最新 PyPI 版不含 yolo26 模型），只在 ultralytics 的 GitHub main 分支。
+> 为保证不破坏主环境 `.venv`（ROS 管线 + YOLOv8），单独建 `.venv-yolo26`，二者互不影响。
+
+```bash
+cd August_task
+
+# 1. 创建独立环境
+python3 -m venv .venv-yolo26
+.venv-yolo26/bin/python -m pip install --upgrade pip -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+# 2. 装 torch（与主环境同版本）
+.venv-yolo26/bin/python -m pip install "torch==2.4.1" "torchvision==0.19.1" \
+    -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+# 3. 装含 YOLO26 的 ultralytics（GitHub main 分支，pip install git+ 可能 TLS 失败，改用源码包）
+.venv-yolo26/bin/python -c "
+import urllib.request
+urllib.request.urlretrieve(
+    'https://codeload.github.com/ultralytics/ultralytics/tar.gz/refs/heads/main',
+    'ultralytics-main.tar.gz')
+"
+tar xzf ultralytics-main.tar.gz
+.venv-yolo26/bin/python -m pip install ./ultralytics-main -i https://pypi.tuna.tsinghua.edu.cn/simple
+rm -rf ultralytics-main ultralytics-main.tar.gz
+
+# 4. 下载 YOLO26 预训练权重（GitHub 大文件慢/易超时，用 wget 断点续传）
+wget -c --tries=8 --timeout=90 \
+    -O src/weights/pretrained/yolo26n.pt \
+    "https://github.com/ultralytics/assets/releases/download/v8.4.0/yolo26n.pt"
+```
+
+> 说明：`yolo26n.pt` 是 COCO 预训练（80 类），用于训练锥桶需用 `train.py` 微调；
+> 训练完权重自动输出到 `src/weights/trained/YOLOv26/`。
+
 ### 3. 编译工作空间
 
 ```bash
@@ -133,7 +183,7 @@ export ROS_MASTER_URI=http://localhost:11311
 roslaunch main_pkg perception.launch \
     bag_path:=src/main_pkg/bag/<你的bag文件.bag> \
     model_path:=src/weights/trained/YOLOv8/best.pt \
-    conf_threshold:=0.3 iou_threshold:=0.5 imgsz:=960 bag_rate:=0.5
+    conf_threshold:=0.4 iou_threshold:=0.55 imgsz:=960 bag_rate:=1.0
 ```
 
 **启动后看什么：**
@@ -165,7 +215,7 @@ source /opt/ros/noetic/setup.bash
 source src/perception_ws/devel/setup.bash
 roslaunch main_pkg perception.launch \
     model_path:=src/weights/trained/YOLOv8/best.pt \
-    conf_threshold:=0.3 iou_threshold:=0.5 imgsz:=960
+    conf_threshold:=0.4 iou_threshold:=0.55 imgsz:=960
 ```
 
 **启动后看什么：**
@@ -177,10 +227,10 @@ roslaunch main_pkg perception.launch \
 
 | 参数 | 默认 | 说明 |
 |------|------|------|
-| `conf_threshold` | 0.5 | 置信度, ↓多检出 ↑少但准 |
-| `iou_threshold` | 0.45 | NMS重叠阈值 |
-| `imgsz` | 1280 | 推理尺寸, 640均衡 / 960高精 |
-| `bag_rate` | 0.5 | bag 播放倍速, <1 给推理留时间 |
+| `conf_threshold` | 0.4 | 置信度, ↓多检出 ↑少但准 |
+| `iou_threshold` | 0.55 | NMS重叠阈值 |
+| `imgsz` | 960 | 推理尺寸, 640均衡 / 960高精 |
+| `bag_rate` | 1.0 | bag 播放倍速, <1 给推理留时间 |
 | `fx/fy` | 1379/1378 | 相机焦距 (标定后填入) |
 | `cx/cy` | 984/611 | 相机光心 |
 | `camera_x/y/z` | 0.3/0/0.5 | 相机安装位置(m) |
@@ -188,6 +238,10 @@ roslaunch main_pkg perception.launch \
 ---
 
 ## 工作流程（数据准备）
+
+> **只用训练好的模型跑系统？** 跳过 ①~⑤，直接用 `src/weights/trained/` 下的 best.pt 推理即可（见「快速启动」）。
+> 完整流程（①~⑥）仅当你要**从零制作数据集并自己训练**时才需要。
+> 注意：以下命令均在项目根目录 `August_task/` 下执行，先 `cd` 进来。
 
 ```
 ROS Bag 录制 → 抽帧提取 → 标注锥桶 → 数据集准备 → 模型训练 → 推理检测
@@ -208,8 +262,11 @@ python3 cone_label_tool.py ./frames_to_label
 # ④ 准备数据集
 python3 prepare_dataset.py ./frames_to_label --labels ./labels --output ./cone_dataset
 
-# ⑤ 训练（模型输出到 weights/trained/YOLOv8/）
+# ⑤ 训练 YOLOv8（模型输出到 weights/trained/YOLOv8/）
 python3 models/YOLOv8/train.py --data ./cone_dataset/data.yaml --epochs 100
+
+# ⑤b 训练 YOLOv26（需独立环境 .venv-yolo26，输出到 weights/trained/YOLOv26/）
+.venv-yolo26/bin/python src/models/YOLOv26/train.py --data ./cone_dataset/data.yaml --epochs 100
 
 # ⑥ 推理（离线）
 python3 bag_yolo_detect.py <bag文件路径> --model ../weights/trained/YOLOv8/best.pt
@@ -228,7 +285,7 @@ cd src/perception_ws
 source /opt/ros/noetic/setup.bash
 catkin_make --only-pkg-with-deps main_pkg
 
-# 必做：修复 relay shebang
+# 必做：修复 relay shebang 即让程序找到虚拟环境
 VENV=$(cd ../.. && pwd)/.venv/bin/python3
 sed -i "1s|#!/usr/bin/python3|#!$VENV|" \
     devel/lib/main_pkg/cone_detector.py \
@@ -272,6 +329,7 @@ echo 'export ROS_MASTER_URI=http://localhost:11311' >> ~/.bashrc
 | `rostopic echo` 卡住 | master 挂了 / URI 错 | 确认 `ROS_MASTER_URI=localhost:11311` |
 | RViz 没显示锥桶 | 话题/节点没启动 | 检查 `/visual/cones` + 重启前 `killall -9 roslaunch` |
 | `ModuleNotFoundError: ultralytics` | catkin_make 重置 relay | 重跑 shebang 修复命令 |
+| `YOLO('yolo26n.pt')` 报不认识该模型 | PyPI 版 ultralytics 不含 YOLO26 | 用 `.venv-yolo26` 环境（含 GitHub main 分支版），见「2b」 |
 | `rosbag play` 打不开文件 | `~` 没展开 / bag 未索引 | 用绝对路径；`rosbag reindex <文件>` |
 | 相机无画面 | USB2.0 / 相机被占用 | 换 USB3.0 口；`pkill -9 -f pylon` 后重试 |
 | 锥桶坐标偏斜 | 相机内参/安装未标定 | 更新 `fx/fy/cx/cy/camera_*` |

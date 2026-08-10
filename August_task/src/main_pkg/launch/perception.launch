@@ -1,7 +1,7 @@
 <launch>
     <!-- 参数 -->
     <arg name="image_topic"     default="/pylon_camera_node/image_raw" />
-    <arg name="model_path"      default="yolov8n.pt" />
+    <arg name="model_path"      default="src/weights/trained/YOLOv8/best.pt" />
     <arg name="conf_threshold"  default="0.4" />
     <arg name="iou_threshold"   default="0.55" />
     <arg name="imgsz"           default="960" /> 
