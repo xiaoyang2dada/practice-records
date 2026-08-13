@@ -17,6 +17,10 @@ src/perception_ws/install/
 *.bag
 *.mp4
 
+# 第三方库源码（本地引用，不上传）
+src/lib/*
+!src/lib/.gitkeep
+
 # 系统文件
 .DS_Store
 *.swp

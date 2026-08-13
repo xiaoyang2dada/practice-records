@@ -1,0 +1,59 @@
+<launch>
+    <!-- 参数 -->
+    <arg name="image_topic"     default="/pylon_camera_node/image_raw" />
+    <arg name="model_path"      default="src/weights/trained/YOLOv7/best.pt" />
+    <arg name="conf_threshold"  default="0.3" />
+    <arg name="iou_threshold"   default="0.45" />
+    <arg name="imgsz"           default="640" />
+    <arg name="infer_stride"    default="1" />   <!-- 每N帧推理一次(>1跳帧省CPU) -->
+    <arg name="show_gui"        default="false" />
+    <arg name="publish_2d"      default="false" />
+    <arg name="bag_path"        default="" />
+    <arg name="bag_topic"       default="/pylon_camera_node/image_raw" />
+    <arg name="bag_rate"        default="1.0" />
+
+    <!-- 相机参数 -->
+    <arg name="fx"             default="1379" />
+    <arg name="fy"             default="1378" />
+    <arg name="cx"             default="984" />
+    <arg name="cy"             default="611" />
+    <arg name="camera_x"       default="0.3" />
+    <arg name="camera_y"       default="0.0" />
+    <arg name="camera_z"       default="0.5" />
+
+    <!-- YOLOv7 锥桶检测节点 (需 .venv-yolov7 环境) -->
+    <node pkg="main_pkg" type="cone_detector_v7.py" name="cone_detector_v7" output="screen">
+        <param name="image_topic"    value="$(arg image_topic)" />
+        <param name="model_path"     value="$(arg model_path)" />
+        <param name="conf_threshold" value="$(arg conf_threshold)" />
+        <param name="iou_threshold"  value="$(arg iou_threshold)" />
+        <param name="imgsz"          value="$(arg imgsz)" />
+        <param name="infer_stride"   value="$(arg infer_stride)" />
+        <param name="show_gui"       value="$(arg show_gui)" />
+        <param name="publish_2d"     value="$(arg publish_2d)" />
+    </node>
+
+    <!-- 坐标转换节点 -->
+    <node pkg="main_pkg" type="demo01_sub" name="demo01_sub" output="screen">
+        <param name="fx"              value="$(arg fx)" />
+        <param name="fy"              value="$(arg fy)" />
+        <param name="cx"              value="$(arg cx)" />
+        <param name="cy"              value="$(arg cy)" />
+        <param name="camera_x"        value="$(arg camera_x)" />
+        <param name="camera_y"        value="$(arg camera_y)" />
+        <param name="camera_z"        value="$(arg camera_z)" />
+    </node>
+
+    <!-- 可视化节点 -->
+    <node pkg="main_pkg" type="visualization_rviz" name="visualization_rviz" output="screen" />
+
+    <!-- RViz显示 -->
+    <node pkg="rviz" type="rviz" name="rviz" output="screen"
+          args="-d $(find main_pkg)/rviz/config.rviz" />
+
+    <!-- [可选]Bag 回放 -->
+    <node pkg="rosbag" type="play" name="rosbag_play" output="screen"
+          launch-prefix="bash -c 'cd $(find main_pkg)/../..; exec $0 $@'"
+          args="$(arg bag_path) --topic $(arg bag_topic) -r $(arg bag_rate) -q"
+          if="$(eval bag_path != '')" />
+</launch>

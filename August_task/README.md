@@ -31,8 +31,14 @@ August_task/
 │   │   │   └── ultralytics/camera_detect.py
 │   │   ├── YOLOv26/train.py    # YOLOv26 训练脚本（独立环境 .venv-yolo26）
 │   │   │   └── ultralytics/camera_detect.py
+│   │   └── YOLOv7/
+│   │       ├── train.py                  # YOLOv7 训练脚本（独立环境 .venv-yolov7）
+│   │       └── ultralytics/camera_detect_v7.py  # YOLOv7 单图调试脚本
+│   ├── lib
+│   │   └── yolov7/            # 官方 YOLOv7 仓库（WongKinYiu/yolov7）源码库
 │   ├── weights                 # 模型权重
 │   │   ├── trained/YOLOv8/best.pt   # YOLOv8 训练好的锥桶模型
+│   │   ├── trained/YOLOv7/best.pt   # YOLOv7 训练好的锥桶模型
 │   │   ├── trained/YOLOv26/         # YOLOv26 训练输出
 │   │   └── pretrained/              # 预训练权重 yolov8n.pt / yolo26n.pt
 │   └── requirements.txt
@@ -146,6 +152,34 @@ wget -c --tries=8 --timeout=90 \
 > 说明：`yolo26n.pt` 是 COCO 预训练（80 类），用于训练锥桶需用 `train.py` 微调；
 > 训练完权重自动输出到 `src/weights/trained/YOLOv26/`。
 
+### 2c. YOLOv7 独立环境（可选，跑 YOLOv7 老权重时需要）
+
+> 学长的 YOLOv7 权重（`src/weights/trained/YOLOv7/best.pt`）需要官方 YOLOv7 推理代码（已放好：`src/lib/yolov7`），
+> 与 ultralytics 的 YOLOv8 推理接口不同，因此单独建 `.venv-yolov7`，二者互不影响。
+> 只跑 YOLOv8/YOLOv26 的话可跳过本节。
+
+```bash
+# 1. 创建独立环境
+python3 -m venv .venv-yolov7
+.venv-yolov7/bin/python -m pip install --upgrade pip -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+# 2. 装 torch（CPU 够用，与主环境同版本）
+.venv-yolov7/bin/python -m pip install "torch==2.4.1" "torchvision==0.19.1" \
+    -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+# 3. 装推理所需依赖（YOLOv7 仓库依赖 + ROS 连接）
+.venv-yolov7/bin/python -m pip install tqdm thop "protobuf<4.21.3" netifaces \
+    rospkg catkin_pkg opencv-python numpy \
+    -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+# 4. 让 venv Python 能找到 ROS 包（同主环境做法）
+echo "/opt/ros/noetic/lib/python3/dist-packages" >> .venv-yolov7/lib/python3.8/site-packages/ros.pth
+echo "$(pwd)/src/perception_ws/devel/lib/python3/dist-packages" >> .venv-yolov7/lib/python3.8/site-packages/ros.pth
+```
+
+> 说明：官方 YOLOv7 的权重文件是 74MB 的 best.pt，已放到 `src/weights/trained/YOLOv7/`，类别为红/蓝/黄三色锥桶。
+> 推理脚本 `camera_detect_v7.py` 与 v8 的 `camera_detect.py` 用法一致。
+
 ### 3. 编译工作空间
 
 ```bash
@@ -158,6 +192,11 @@ VENV=$(cd ../.. && pwd)/.venv/bin/python3
 sed -i "1s|#!/usr/bin/python3|#!$VENV|" \
     devel/lib/main_pkg/cone_detector.py \
     devel/lib/main_pkg/pylon_image_publisher.py
+
+# YOLOv7 节点用 .venv-yolov7（若要用 v7 链路）
+VENV7=$(cd ../.. && pwd)/.venv-yolov7/bin/python3
+sed -i "1s|#!/usr/bin/python3|#!$VENV7|" \
+    devel/lib/main_pkg/cone_detector_v7.py
 ```
 
 ---
@@ -190,6 +229,27 @@ roslaunch main_pkg perception.launch \
 - 终端滚动 `=== 接收锥桶: N 个 ===` 日志
 - RViz 弹出，显示红/蓝锥桶方体
 - 新终端看数据：`rostopic echo /yolov7/yolov7/all_cones -n 1`
+
+### 场景一b：用 YOLOv7 权重检测（预留模型）
+
+> 与场景一同链路，仅检测节点换成 `cone_detector_v7`（用 `.venv-yolov7`），
+> 权重为 `src/weights/trained/YOLOv7/best.pt`，默认 conf=0.3 / iou=0.45 / imgsz=640。
+
+```bash
+source /opt/ros/noetic/setup.bash
+source src/perception_ws/devel/setup.bash
+export ROS_HOSTNAME=localhost
+export ROS_MASTER_URI=http://localhost:11311
+
+roslaunch main_pkg perception_v7.launch \
+    bag_path:=src/main_pkg/bag/<你的bag文件.bag> \
+    model_path:=src/weights/trained/YOLOv7/best.pt \
+    conf_threshold:=0.3 iou_threshold:=0.45 imgsz:=640 bag_rate:=1.0
+```
+
+**启动后看什么：**
+- 终端滚动 `=== 接收锥桶: N 个 ===` 日志（每帧 10~20 个为正常，视场景而定）
+- RViz 红/蓝/黄锥桶方体；`rostopic echo /yolov7/yolov7/all_cones -n 1` 看坐标
 
 ### 场景二：上车实时检测（有相机时，无需 pylon C++ SDK）
 
@@ -268,6 +328,9 @@ python3 models/YOLOv8/train.py --data ./cone_dataset/data.yaml --epochs 100
 # ⑤b 训练 YOLOv26（需独立环境 .venv-yolo26，输出到 weights/trained/YOLOv26/）
 .venv-yolo26/bin/python src/models/YOLOv26/train.py --data ./cone_dataset/data.yaml --epochs 100
 
+# ⑤c 训练/微调 YOLOv7（需独立环境 .venv-yolov7，输出到 weights/trained/YOLOv7/）
+.venv-yolov7/bin/python src/models/YOLOv7/train.py --data ./cone_dataset/data.yaml --epochs 100
+
 # ⑥ 推理（离线）
 python3 bag_yolo_detect.py <bag文件路径> --model ../weights/trained/YOLOv8/best.pt
 ```
@@ -329,6 +392,10 @@ echo 'export ROS_MASTER_URI=http://localhost:11311' >> ~/.bashrc
 | `rostopic echo` 卡住 | master 挂了 / URI 错 | 确认 `ROS_MASTER_URI=localhost:11311` |
 | RViz 没显示锥桶 | 话题/节点没启动 | 检查 `/visual/cones` + 重启前 `killall -9 roslaunch` |
 | `ModuleNotFoundError: ultralytics` | catkin_make 重置 relay | 重跑 shebang 修复命令 |
+| v7 节点报 `KeyError: 16` / cv_bridge 错 | .venv-yolov7 新版 OpenCV 与 ros cv_bridge 不兼容 | 已改为手动构造 Image，重新 catkin_make + 修复 relay |
+| v7 加载权重报找不到文件（路径含大写） | 官方 attempt_download 会小写化路径 | 已用自定义 load_model，勿改权重路径大小写 |
+| v7 检测框巨大/错位 | 双重 xywh2xyxy 转换（NMS 内部已转一次） | 已修复：原始 pred 直接传 NMS + letterbox/scale_coords |
+| 每帧检测 300+ 个 | letterbox/坐标处理错误 | 已用官方 detect.py 流程（已修复） |
 | `YOLO('yolo26n.pt')` 报不认识该模型 | PyPI 版 ultralytics 不含 YOLO26 | 用 `.venv-yolo26` 环境（含 GitHub main 分支版），见「2b」 |
 | `rosbag play` 打不开文件 | `~` 没展开 / bag 未索引 | 用绝对路径；`rosbag reindex <文件>` |
 | 相机无画面 | USB2.0 / 相机被占用 | 换 USB3.0 口；`pkill -9 -f pylon` 后重试 |

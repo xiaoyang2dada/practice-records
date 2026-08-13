@@ -52,21 +52,32 @@ class ConeDetector:
         conf_threshold = rospy.get_param("~conf_threshold", 0.4)
         iou_threshold  = rospy.get_param("~iou_threshold", 0.55)   # NMS IoU 阈值
         imgsz = rospy.get_param("~imgsz", 960)           # 推理尺寸，小值省内存
+        self.infer_stride = rospy.get_param("~infer_stride", 1)  # 每N帧推理一次(>1跳帧省CPU), 1=不跳帧
         self.publish_2d = rospy.get_param("~publish_2d", False)
         self.show_gui = rospy.get_param("~show_gui", False)
         self.fy_est = rospy.get_param("~fy_depth", 1000.0)  # 深度估算用 fy
         self.cone_h = rospy.get_param("~cone_height", 0.3)   # 锥桶真实高度(m)
+        self._frame_count = 0   # 跳帧计数
+        self._last_results = None  # 最近一次推理结果(供跳帧复用)
 
         # 初始化 YOLO
         rospy.loginfo(f"加载 YOLO 模型: {model_path}")
         if not os.path.exists(model_path):
             rospy.logwarn(f"模型文件不存在: {model_path}，尝试从 ultralytics 下载...")
+        # 检查权重是否为旧版 YOLOv5/YOLOv7 格式（ultralytics 无法加载，提前给出明确提示）
+        if os.path.exists(model_path) and self._is_old_yolo_weight(model_path):
+            rospy.logerr(
+                f"模型 {model_path} 是旧版 YOLOv5/YOLOv7 权重，与 ultralytics 不兼容。"
+                f"请改用 ultralytics 训练的权重（如 src/weights/trained/YOLOv8/best.pt）")
+            rospy.signal_shutdown("模型格式不兼容")
+            return
         self.model = YOLO(model_path)
         self.conf_threshold = conf_threshold
         self.iou_threshold = iou_threshold
         self.imgsz = imgsz
         rospy.loginfo(f"模型类别: {list(self.model.names.values())}, "
-                      f"imgsz={imgsz}, conf={conf_threshold}, iou={iou_threshold}")
+                      f"imgsz={imgsz}, conf={conf_threshold}, iou={iou_threshold}, "
+                      f"infer_stride={self.infer_stride}")
 
         # 初始化cv_bridge
         self.bridge = cv_bridge.CvBridge()
@@ -91,6 +102,20 @@ class ConeDetector:
         rospy.loginfo(f"锥桶检测节点已启动，订阅: {image_topic}，发布: /test/camera_cones")
         if self.publish_2d:
             rospy.loginfo(f"同时发布 2D 检测结果到: /test/camera_cones_2d")
+
+    @staticmethod
+    def _is_old_yolo_weight(model_path):
+        # 检测旧版 YOLOv5/YOLOv7 权重: 其内部序列化了 yolov5 的 models 模块,
+        # 在无 yolov5 库环境下 torch.load 会抛 ModuleNotFoundError: No module named 'models'
+        try:
+            import torch
+            torch.load(model_path, map_location='cpu')
+            return False
+        except ModuleNotFoundError as e:
+            return 'models' in str(e)
+        except Exception:
+            # 其他无法解析的权重交由 ultralytics 处理（可能触发下载等）
+            return False
 
     def _subscribe_image_topic(self, topic_name):
         # 等待图像话题出现，自动匹配消息类型后订阅
@@ -147,9 +172,18 @@ class ConeDetector:
         self._process_frame(cv_image, msg.header)
 
     def _process_frame(self, cv_image, header):
-        # YOLOv8 推理
-        results = self.model(cv_image, conf=self.conf_threshold,
-                             iou=self.iou_threshold, imgsz=self.imgsz, verbose=False)
+        # 跳帧推理: infer_stride>1 时每 N 帧推理一次, 中间帧复用最近结果 (省 CPU)
+        if self.infer_stride > 1:
+            if self._frame_count % self.infer_stride == 0:
+                results = self.model(cv_image, conf=self.conf_threshold,
+                                     iou=self.iou_threshold, imgsz=self.imgsz, verbose=False)
+                self._last_results = results
+            else:
+                results = self._last_results  # 复用最近一次推理结果, 不重新推理
+            self._frame_count += 1
+        else:
+            results = self.model(cv_image, conf=self.conf_threshold,
+                                 iou=self.iou_threshold, imgsz=self.imgsz, verbose=False)
 
         # 构造 ConeArray 消息
         cone_array = ConeArray()

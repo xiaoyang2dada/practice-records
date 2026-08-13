@@ -74,6 +74,8 @@ __pycache__/
 .venv/
 venv/
 .venv-yolo26/
+.venv-yolov7/
+.venv-yolov5/
 
 # ===== ROS =====
 devel/
