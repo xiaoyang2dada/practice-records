@@ -17,6 +17,9 @@ src/perception_ws/install/
 *.bag
 *.mp4
 
+# 预留模型（本地保留，不上传）
+src/weights/trained/YOLOv7/
+
 # 第三方库源码（本地引用，不上传）
 src/lib/*
 !src/lib/.gitkeep
