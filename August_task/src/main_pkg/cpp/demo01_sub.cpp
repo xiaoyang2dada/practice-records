@@ -1,5 +1,7 @@
 #include "ros/ros.h"
 #include "main_pkg/ConeArray.h"
+#include "yolov7_ros/ConeArray.h"   // 对方消息类型
+#include "yolov7_ros/ConeInfo.h"
 #include <cmath>
 
 // 全局变量
@@ -26,7 +28,8 @@ int main(int argc, char *argv[])
     if (!loadParams(nh)) { ROS_ERROR("参数加载失败!"); return 1; }
 
     ros::NodeHandle nh_global;
-    g_cone_pub = nh_global.advertise<main_pkg::ConeArray>("/yolov7/yolov7/all_cones", 10);
+    // 发布对方类型 yolov7_ros/ConeArray，话题名不变
+    g_cone_pub = nh_global.advertise<yolov7_ros::ConeArray>("/yolov7/yolov7/all_cones", 10);
     ros::Subscriber sub = nh_global.subscribe<main_pkg::ConeArray>(
         "/test/camera_cones", 10, doMsg);
 
@@ -54,7 +57,8 @@ void doMsg(const main_pkg::ConeArray::ConstPtr &msg)
 {
     ROS_INFO("=== 接收锥桶: %zu 个 ===", msg->cones.size());
 
-    main_pkg::ConeArray car_cones;
+    // 转换为对方类型 yolov7_ros/ConeArray
+    yolov7_ros::ConeArray car_cones;
     car_cones.header.frame_id = "base_link";
     car_cones.header.stamp = ros::Time::now();
 
@@ -81,9 +85,8 @@ void doMsg(const main_pkg::ConeArray::ConstPtr &msg)
         ROS_INFO("  锥桶[%zu]: px(%.0f,%.0f) d=%.2f → car(%.2f,%.2f,%.2f)m %s",
                  i+1, u, v, depth, car_x, car_y, car_z, msg->cones[i].color.c_str());
 
-        main_pkg::ConeInfo cone;
-        cone.header.stamp = msg->cones[i].header.stamp;
-        cone.header.frame_id = "base_link";
+        yolov7_ros::ConeInfo cone;
+        cone.id = (int)(i + 1);                       // 对方有 id 字段
         cone.position.x = car_x; cone.position.y = car_y; cone.position.z = car_z;
         cone.color = msg->cones[i].color;
         cone.confidence = msg->cones[i].confidence;
@@ -91,5 +94,5 @@ void doMsg(const main_pkg::ConeArray::ConstPtr &msg)
     }
 
     g_cone_pub.publish(car_cones);
-    ROS_INFO("已发布 %zu 个 → /yolov7/yolov7/all_cones", car_cones.cones.size());
+    ROS_INFO("已发布 %zu 个 → /yolov7/yolov7/all_cones (yolov7_ros/ConeArray)", car_cones.cones.size());
 }

@@ -77,7 +77,7 @@ def parse_voc_xml(xml_path):
 
         return (width, height), objects
     except Exception as e:
-        print(f"  ⚠ 解析失败 {xml_path}: {e}")
+        print(f"  解析失败 {xml_path}: {e}")
         return None
 
 
@@ -244,7 +244,7 @@ def main():
         print(f"  未知类别:     {skipped_unknown}")
 
     if len(samples) == 0:
-        print("\n❌ 没有有效样本，请检查数据集！")
+        print("\n没有有效样本，请检查数据集！")
         sys.exit(1)
 
     # ============ 第2步: 划分 train/val ============
@@ -303,7 +303,7 @@ names:
     with open(yaml_path, 'w', encoding='utf-8') as f:
         f.write(yaml_content)
 
-    print(f"  ✅ {yaml_path}")
+    print(f"  {yaml_path}")
     print(f"\n{'=' * 60}")
     print("全部完成！")
     print("=" * 60)

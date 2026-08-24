@@ -1,12 +1,12 @@
 #include "ros/ros.h"
 #include "std_msgs/String.h"
-#include "main_pkg/ConeArray.h"
+#include "yolov7_ros/ConeArray.h"
 #include "visualization_msgs/Marker.h"
 #include "visualization_msgs/MarkerArray.h"
 
 ros::Publisher g_marker_pub;
 
-void doConeMsg(const main_pkg::ConeArray::ConstPtr& msg);
+void doConeMsg(const yolov7_ros::ConeArray::ConstPtr& msg);
 
 int main(int argc, char *argv[])
 {
@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-void doConeMsg(const main_pkg::ConeArray::ConstPtr& msg)
+void doConeMsg(const yolov7_ros::ConeArray::ConstPtr& msg)
 {
     visualization_msgs::MarkerArray marker_array;
     int marker_id = 0;

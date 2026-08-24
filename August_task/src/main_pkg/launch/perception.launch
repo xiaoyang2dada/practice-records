@@ -1,16 +1,18 @@
 <launch>
-    <!-- 参数 -->
+    <!-- 参数（默认值 = 对接实战参数） -->
     <arg name="image_topic"     default="/pylon_camera_node/image_raw" />
     <arg name="model_path"      default="src/weights/trained/YOLOv8/best.pt" />
-    <arg name="conf_threshold"  default="0.4" />
-    <arg name="iou_threshold"   default="0.55" />
-    <arg name="imgsz"           default="960" /> 
+    <arg name="conf_threshold"  default="0.5" />
+    <arg name="iou_threshold"   default="0.6" />
+    <arg name="imgsz"           default="320" /> 
     <arg name="infer_stride"    default="1" />   <!-- 每N帧推理一次(>1跳帧省CPU) -->
     <arg name="show_gui"        default="false" />  
     <arg name="publish_2d"      default="false" />
+    <arg name="show_rviz"       default="false" />  <!-- 本机是否打开 RViz 可视化(对接发布给队友时可关掉省CPU) -->
     <arg name="bag_path"        default="" />
     <arg name="bag_topic"       default="/pylon_camera_node/image_raw" />
-    <arg name="bag_rate"        default="1.0" />  
+    <arg name="bag_rate"        default="1.0" />
+    <arg name="bag_extra_args"  default="" />   <!-- 额外参数，如 -l 循环回放 -->  
 
     <!-- 相机参数 -->
     <arg name="fx"             default="1379" />
@@ -44,16 +46,16 @@
         <param name="camera_z"        value="$(arg camera_z)" />
     </node>
 
-    <!-- 可视化节点 -->
-    <node pkg="main_pkg" type="visualization_rviz" name="visualization_rviz" output="screen" />
+    <!-- 可视化节点(本机 RViz 数据源；show_rviz=false 时不启动,省CPU) -->
+    <node pkg="main_pkg" type="visualization_rviz" name="visualization_rviz" output="screen" if="$(arg show_rviz)" />
 
-    <!-- RViz显示 -->
+    <!-- RViz显示(仅 show_rviz=true 时打开) -->
     <node pkg="rviz" type="rviz" name="rviz" output="screen"
-          args="-d $(find main_pkg)/rviz/config.rviz" />
+          args="-d $(find main_pkg)/rviz/config.rviz" if="$(arg show_rviz)" />
 
     <!-- [可选]Bag 回放 -->
     <node pkg="rosbag" type="play" name="rosbag_play" output="screen"
           launch-prefix="bash -c 'cd $(find main_pkg)/../..; exec $0 $@'"
-          args="$(arg bag_path) --topic $(arg bag_topic) -r $(arg bag_rate) -q"
+          args="$(arg bag_path) --topics $(arg bag_topic) -r $(arg bag_rate) -q $(arg bag_extra_args)"
           if="$(eval bag_path != '')" />
 </launch>

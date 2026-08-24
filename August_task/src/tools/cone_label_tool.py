@@ -86,7 +86,7 @@ class ConeLabelTool:
 
     def _print_help(self):
         print("""
-🎮 操作说明:
+操作说明:
   1/2/3 或 R/B/Y  - 切换类别 (红/蓝/黄)
   鼠标左键点击两次 - 画框
   鼠标右键 / Esc   - 取消当前框

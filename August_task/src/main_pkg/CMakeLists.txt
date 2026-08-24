@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   geometry_msgs
   visualization_msgs
+  yolov7_ros
 )
 
 ## System dependencies are found with CMake's conventions
@@ -111,7 +112,7 @@ generate_messages(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES main
- CATKIN_DEPENDS roscpp rospy std_msgs geometry_msgs message_runtime visualization_msgs
+ CATKIN_DEPENDS roscpp rospy std_msgs geometry_msgs message_runtime visualization_msgs yolov7_ros
 #  DEPENDS system_lib
 )
 
@@ -152,6 +153,7 @@ add_executable(visualization_rviz cpp/visualization_rviz.cpp)
 ## same as for the librar5ty above
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(demo01_sub ${PROJECT_NAME}_generate_messages_cpp)
+add_dependencies(demo01_sub ${yolov7_ros_EXPORTED_TARGETS})
 add_dependencies(visualization_rviz ${PROJECT_NAME}_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against

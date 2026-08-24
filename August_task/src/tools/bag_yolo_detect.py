@@ -102,7 +102,7 @@ def get_bag_info(bag_path):
         sys.exit(1)
 
     print("-" * 60)
-    print(f"🎥 找到 {len(image_topics)} 个视频流话题:")
+    print(f"找到 {len(image_topics)} 个视频流话题:")
     for i, (t, m, c) in enumerate(image_topics):
         print(f"  [{i}] {t}  ({m}, {c} 帧)")
     print("-" * 60)
@@ -146,11 +146,11 @@ def process_bag(bag_path, image_topic, msg_type, output_path, conf_threshold, mo
         class_names = model.names if custom_model else None
 
         if custom_model:
-            print(f"🔧 检测到自定义锥桶模型 ({len(model.names)} 类): {list(model.names.values())}")
+            print(f"检测到自定义锥桶模型 ({len(model.names)} 类): {list(model.names.values())}")
         else:
-            print(f"📦 COCO 预训练模型 (80 类)，只显示 traffic light / stop sign")
+            print(f"COCO 预训练模型 (80 类)，只显示 traffic light / stop sign")
     else:
-        print(f"\n📹 原始视频模式（跳过 YOLOv8 推理）")
+        print(f"\n原始视频模式（跳过 YOLOv8 推理）")
 
     # ---------- 初始化 CvBridge ----------
     bridge = CvBridge()

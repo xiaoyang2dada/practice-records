@@ -41,7 +41,7 @@ def main():
     print(f"加载模型: {args.model}")
     model = YOLO(args.model)
     print(f"   类别: {list(model.names.values())}")
-    print(f"🎥 打开摄像头 {args.camera}...")
+    print(f"打开摄像头 {args.camera}...")
     print(f"   按 Q 退出\n")
 
     cap = cv2.VideoCapture(args.camera)

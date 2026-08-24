@@ -100,7 +100,7 @@ def convert_fsacoco_to_yolo(fsacoco_path, image_w, image_h, yolo_path):
             continue
 
         if class_name not in FSACOCO_CLASS_MAP:
-            print(f"  ⚠️  未知类别: {class_name}，跳过")
+            print(f"  未知类别: {class_name}，跳过")
             continue
 
         class_id = FSACOCO_CLASS_MAP[class_name]
@@ -166,7 +166,7 @@ def prepare_dataset(image_dir, label_dir, output_dir, split_ratio=0.8, seed=42):
         print(f"在 {image_dir} 中未找到图片！")
         return
 
-    print(f"📷 找到 {len(images)} 张图片")
+    print(f"找到 {len(images)} 张图片")
 
     # ---- 匹配图片和标注 ----
     paired = []
